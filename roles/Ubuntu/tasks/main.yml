@@ -1,0 +1,105 @@
+- name: Installing nagios dependecies and libraries.
+  tags: dependecies, libraries
+  apt:
+    name:
+      - autoconf
+      - gcc
+      - libc6
+      - make
+      - wget
+      - unzip
+      - apache2
+      - php
+      - libapache2-mod-php7.4
+      - libgd-dev
+      -  openssl
+      - libssl-dev
+      - autoconf
+      - gcc
+      - libc6
+      - libmcrypt-dev
+      - make
+      - libssl-dev
+      - wget
+      - bc
+      - gawk
+      - dc
+      - build-essential
+      - snmp
+      - libnet-snmp-perl
+      - gettext
+      - python3-pip
+      - python3
+    state: latest
+
+- name: Install passlib python package.
+  pip:
+    name: passlib
+
+- name: Directory for Nagios.
+  file:
+    path: ~/nagios
+    state: directory
+
+- name: Downloading Nagios and Extracting files of Nagios.
+  unarchive:
+    src: https://github.com/NagiosEnterprises/nagioscore/archive/nagios-4.4.6.tar.gz
+    dest: ~/nagios
+    remote_src: yes
+    mode: 0755
+    owner: root
+    group: root
+
+- name: Setting up Nagios Which is Compiling, installing, and creating users and group.
+  shell: |
+    cd ~/nagios/nagioscore-*
+    sudo ./configure --with-httpd-conf=/etc/apache2/sites-enabled
+    sudo make all
+    sudo make install-groups-users
+    sudo usermod -a -G nagios www-data
+    sudo make install
+    sudo make install-daemoninit
+    sudo make install-commandmode
+    sudo make install-config
+    sudo make install-webconf
+    sudo a2enmod rewrite
+    sudo a2enmod cgi
+
+- name: Downloading nagios plugins and extracting its file.
+  unarchive:
+    src: https://github.com/nagios-plugins/nagios-plugins/archive/release-2.3.3.tar.gz
+    dest: ~/nagios
+    remote_src: yes
+    mode: 0755
+    owner: root
+    group: root
+
+- name: Changing Directories and Compiling. Also, installing nagios plugins.
+  shell: |
+    cd ~/nagios/nagios-plugins*
+    ./tools/setup
+    ./configure
+    make
+    make install
+- name: Creating user and password. Also, ensuring permissions are set.
+  community.general.htpasswd:
+    path: /usr/local/nagios/etc/htpasswd.users
+    name: admin
+    password: junemmq
+
+- name: Starting Nagios and enabled it.
+  service:
+    name: nagios
+    state: restarted
+    enabled: true
+
+- name: Starting httpd and enabled it.
+  service:
+    name: apache2
+    state: restarted
+    enabled: true
+
+- name: MOTD Banner
+  copy:
+    dest: /etc/motd
+    content: "Ansible Managed Node by Junemel"

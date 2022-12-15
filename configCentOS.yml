@@ -1,0 +1,23 @@
+---
+
+- hosts: all
+  become: true
+  pre_tasks:
+
+  - name: dnf and epel-release download
+    yum:
+      name:
+        - epel-release
+        - dnf
+    when: ansible_distribution == "CentOS"
+
+  - name: Remote CentOS server Update and Upgrade
+    dnf:
+      update_cache: yes
+      update_only: yes
+    when: ansible_distribution == "CentOS"
+
+- hosts: CentOS
+  become: true
+  roles:
+    - role: CentOS

@@ -1,0 +1,98 @@
+- name: Installing nagios dependecies and libraries.
+  tags: dependecies, libraries
+  dnf:
+    name:
+      - gcc
+      - glibc
+      - glibc-common
+      - perl
+      - httpd
+      - php
+      - wget
+      - gd
+      - gd-devel
+      - openssl-devel
+      - gcc
+      - glibc
+      - glibc-common
+      - make
+      - gettext
+      - automake
+      - autoconf
+      - wget
+      - openssl-devel
+      - net-snmp
+      - net-snmp-utils
+      - python2-pip
+    state: latest
+
+- name: Install passlib python package.
+  pip:
+    name: passlib
+
+- name: Creating a directory named nagios.
+  file:
+    path: ~/nagios
+    state: directory
+
+- name: Downloading Nagios and changing directory. Also, extracting its files.
+  unarchive:
+    src: https://github.com/NagiosEnterprises/nagioscore/archive/nagios-4.4.6.tar.gz
+    dest: ~/nagios
+    remote_src: yes
+    mode: 0777
+    owner: root
+    group: root
+
+- name: Instaling Nagios and Compiling it. Also, adding users and groups in nagios.
+  shell: |
+    cd ~/nagios/nagioscore-**
+    ./configure
+    make all
+    make install-groups-users
+    usermod -a -G nagios apache
+    make install
+    make install-daemoninit
+    make install-commandmode
+    make install-config
+    make install-webconf
+
+- name: Downloading nagios plugins and extracting its file.
+  unarchive:
+    src: https://github.com/nagios-plugins/nagios-plugins/archive/release-2.3.3.tar.gz
+    dest: ~/nagios
+    remote_src: yes
+    mode: 0777
+    owner: root
+    group: root
+
+- name: Installing nagios plugins and compile its file.
+  shell: |
+    cd ~/nagios/nagios-plugins*
+    ./tools/setup
+    ./configure
+    make
+    make install
+
+- name: Creating user and password file. Also, ensuring the permissions are set.
+  community.general.htpasswd:
+    path: /usr/local/nagios/etc/htpasswd.users
+    name: nagiosadmin
+    password: 09170113
+
+- name: Starting nagios and enabled it.
+  service:
+    name: nagios
+    state: restarted
+    enabled: true
+
+- name: Starting httpd and enabled it.
+  service:
+    name: httpd
+    state: restarted
+    enabled: true
+
+- name: MOTD Banner
+  copy:
+    dest: /etc/motd
+    content: "Ansible Managed Node by Junemel"
